@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
+const connectDB = require("./config/db");
 
 const app = express();
 
@@ -16,7 +17,7 @@ app.get("/", (req, res) => {
     message: "MailPilot backend is running 🚀"
   });
 });
-
+connectDB();
 // Start server
 app.listen(PORT, () => {
   console.log(`MailPilot server running on http://localhost:${PORT}`);
