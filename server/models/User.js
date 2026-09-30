@@ -23,6 +23,23 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    gmail: {
+  connected: {
+    type: Boolean,
+    default: false,
+  },
+
+  refreshToken: {
+    type: String,
+    default: null,
+    select: false,
+  },
+
+  gmailAddress: {
+    type: String,
+    default: "",
+  },
+},
 
     preferences: {
       replyStyle: {
