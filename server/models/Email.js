@@ -37,6 +37,10 @@ const emailSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    body: {
+  type: String,
+  default: "",
+},
 
     category: {
       type: String,
