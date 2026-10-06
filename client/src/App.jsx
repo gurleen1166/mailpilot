@@ -1,122 +1,1012 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useState } from "react";
+import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [activeTab, setActiveTab] = useState("Overview");
+
+  const [emails, setEmails] = useState([]);
+  const [opportunities, setOpportunities] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // Temporary user ID for local development.
+  // Later this will come from authenticated Google login.
+  const USER_ID = "69f0b7ebe6fb8ba1b41aefde";
+
+  // ==========================================================
+  // FETCH DASHBOARD DATA
+  // ==========================================================
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const [emailResponse, opportunityResponse] =
+          await Promise.all([
+            fetch(
+              `http://localhost:5001/api/gmail/emails/saved/${USER_ID}`
+            ),
+            fetch(
+              `http://localhost:5001/api/opportunities/${USER_ID}`
+            ),
+          ]);
+
+        if (!emailResponse.ok || !opportunityResponse.ok) {
+          throw new Error(
+            "Could not load dashboard data."
+          );
+        }
+
+        const emailData = await emailResponse.json();
+        const opportunityData =
+          await opportunityResponse.json();
+
+        setEmails(emailData.emails || []);
+        setOpportunities(
+          opportunityData.opportunities || []
+        );
+      } catch (err) {
+        console.error(
+          "Dashboard fetch error:",
+          err
+        );
+
+        setError(
+          "Unable to load dashboard data. Please check your backend."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  // ==========================================================
+  // SIDEBAR MENU
+  // ==========================================================
+
+  const menuItems = [
+    {
+      name: "Overview",
+      icon: "◫",
+    },
+    {
+      name: "All Emails",
+      icon: "✉",
+    },
+    {
+      name: "Opportunities",
+      icon: "✧",
+    },
+    {
+      name: "AI Assistant",
+      icon: "✳",
+    },
+    {
+      name: "Reminders",
+      icon: "◷",
+    },
+  ];
+
+  // ==========================================================
+  // HELPER FUNCTIONS
+  // ==========================================================
+
+  const formatDate = (date) => {
+    if (!date) {
+      return "Unknown";
+    }
+
+    const parsedDate = new Date(date);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      return "Unknown";
+    }
+
+    return parsedDate.toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const getInitial = (sender) => {
+    if (!sender) {
+      return "?";
+    }
+
+    return sender.trim().charAt(0).toUpperCase();
+  };
+
+  // ==========================================================
+  // OVERVIEW PAGE
+  // ==========================================================
+
+  const renderOverviewPage = () => {
+    return (
+      <>
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">
+              YOUR PERSONAL EMAIL COPILOT
+            </p>
+
+            <h1>Overview</h1>
+          </div>
+
+          <button className="connect-button">
+            <span>●</span>
+            Connect Gmail
+          </button>
+        </header>
+
+        {/* Welcome Card */}
+        <section className="welcome-card">
+          <div>
+            <span className="welcome-tag">
+              ✦ YOUR DAY, SIMPLIFIED
+            </span>
+
+            <h2>
+              Less inbox chaos.
+              <br />
+              More opportunities.
+            </h2>
+
+            <p>
+              Your AI-powered workspace for important
+              emails, career opportunities, and everyday
+              productivity.
+            </p>
+
+            <button
+              className="primary-button"
+              onClick={() =>
+                setActiveTab("All Emails")
+              }
+            >
+              Explore my inbox
+              <span>→</span>
+            </button>
+          </div>
+
+          <div
+            className="welcome-art"
+            aria-hidden="true"
+          >
+            <div className="orbit orbit-one"></div>
+            <div className="orbit orbit-two"></div>
+
+            <div className="mail-art">
+              ✉
+            </div>
+
+            <div className="sparkle sparkle-one">
+              ✦
+            </div>
+
+            <div className="sparkle sparkle-two">
+              ✧
+            </div>
+          </div>
+        </section>
+
+        {/* Statistics */}
+        <section className="stats-grid">
+          <article className="stat-card">
+            <div className="stat-top">
+              <span>Total Emails</span>
+
+              <span className="stat-icon purple">
+                ✉
+              </span>
+            </div>
+
+            <h3>
+              {loading ? "…" : emails.length}
+            </h3>
+
+            <p>
+              Emails loaded from your inbox
+            </p>
+          </article>
+
+          <article className="stat-card">
+            <div className="stat-top">
+              <span>Opportunities</span>
+
+              <span className="stat-icon green">
+                ✧
+              </span>
+            </div>
+
+            <h3>
+              {loading
+                ? "…"
+                : opportunities.length}
+            </h3>
+
+            <p>
+              Jobs and internships found
+            </p>
+          </article>
+
+          <article className="stat-card">
+            <div className="stat-top">
+              <span>High Priority</span>
+
+              <span className="stat-icon orange">
+                ↗
+              </span>
+            </div>
+
+            <h3>
+              {loading
+                ? "…"
+                : emails.filter(
+                    (email) =>
+                      email.importance === "high"
+                  ).length}
+            </h3>
+
+            <p>
+              Important emails to review
+            </p>
+          </article>
+        </section>
+
+        {/* Recent Content */}
+        <section className="content-grid">
+          {/* Recent Emails */}
+          <article className="panel">
+            <div className="panel-heading">
+              <div>
+                <h2>Recent Emails</h2>
+
+                <p>
+                  Your latest inbox activity
+                </p>
+              </div>
+
+              <button
+                onClick={() =>
+                  setActiveTab("All Emails")
+                }
+              >
+                View all →
+              </button>
+            </div>
+
+            {loading ? (
+              <div className="empty-state">
+                <p>
+                  Loading your emails...
+                </p>
+              </div>
+            ) : error ? (
+              <div className="empty-state">
+                <p>{error}</p>
+              </div>
+            ) : emails.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">
+                  ✉
+                </div>
+
+                <h3>
+                  No emails found
+                </h3>
+
+                <p>
+                  Connect Gmail and load your
+                  inbox to see your emails here.
+                </p>
+              </div>
+            ) : (
+              <div className="email-list">
+                {emails
+                  .slice(0, 5)
+                  .map((email) => (
+                    <div
+                      className="email-item"
+                      key={
+                        email._id ||
+                        email.gmailMessageId
+                      }
+                    >
+                      <div className="email-item-top">
+                        <strong>
+                          {email.sender ||
+                            "Unknown sender"}
+                        </strong>
+
+                        <span
+                          className={`priority-badge ${
+                            email.importance ||
+                            "low"
+                          }`}
+                        >
+                          {email.importance ||
+                            "low"}
+                        </span>
+                      </div>
+
+                      <h3>
+                        {email.subject ||
+                          "(No subject)"}
+                      </h3>
+
+                      <p>
+                        {email.summary ||
+                          email.snippet ||
+                          "No preview available."}
+                      </p>
+
+                      <span className="email-category">
+                        {email.category ||
+                          "general"}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </article>
+
+          {/* Career Opportunities */}
+          <article className="panel opportunities-panel">
+            <div className="panel-heading">
+              <div>
+                <h2>
+                  Career Opportunities
+                </h2>
+
+                <p>
+                  Jobs and internships from
+                  your emails
+                </p>
+              </div>
+
+              <span className="live-badge">
+                AI READY
+              </span>
+            </div>
+
+            {loading ? (
+              <div className="opportunity-placeholder">
+                <p>
+                  Loading opportunities...
+                </p>
+              </div>
+            ) : error ? (
+              <div className="opportunity-placeholder">
+                <p>
+                  Unable to load
+                  opportunities.
+                </p>
+              </div>
+            ) : opportunities.length === 0 ? (
+              <div className="opportunity-placeholder">
+                <div className="opportunity-icon">
+                  ✧
+                </div>
+
+                <div>
+                  <h3>
+                    No opportunities yet
+                  </h3>
+
+                  <p>
+                    Jobs and internships found
+                    in your emails will appear
+                    here.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="opportunity-list">
+                {opportunities
+                  .slice(0, 5)
+                  .map((opportunity) => (
+                    <div
+                      className="opportunity-placeholder"
+                      key={opportunity._id}
+                    >
+                      <div className="opportunity-icon">
+                        ✧
+                      </div>
+
+                      <div>
+                        <h3>
+                          {opportunity.role ||
+                            "Job opportunity"}
+                        </h3>
+
+                        <p>
+                          {opportunity.company ||
+                            "Company not specified"}
+                        </p>
+
+                        <span className="email-category">
+                          {opportunity.type ||
+                            "other"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
+
+            <button
+              className="opportunities-link"
+              onClick={() =>
+                setActiveTab(
+                  "Opportunities"
+                )
+              }
+            >
+              Explore opportunities
+              <span>→</span>
+            </button>
+          </article>
+        </section>
+
+        <footer className="footer">
+          <span>
+            MailPilot © 2026
+          </span>
+
+          <span>
+            Built to make every email count. ✦
+          </span>
+        </footer>
+      </>
+    );
+  };
+
+  // ==========================================================
+  // ALL EMAILS PAGE
+  // ==========================================================
+
+  const renderAllEmailsPage = () => {
+    return (
+      <>
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">
+              SMART INBOX
+            </p>
+
+            <h1>All Emails</h1>
+          </div>
+
+          <button className="connect-button">
+            <span>●</span>
+            Connect Gmail
+          </button>
+        </header>
+
+        {/* Inbox Header */}
+        <section className="page-intro">
+          <div>
+            <h2>Your Inbox</h2>
+
+            <p>
+              Review your emails, priorities,
+              categories, and AI summaries.
+            </p>
+          </div>
+
+          <div className="email-count">
+            <strong>
+              {emails.length}
+            </strong>
+
+            <span>
+              emails loaded
+            </span>
+          </div>
+        </section>
+
+        {/* Email List */}
+        {loading ? (
+          <div className="empty-state">
+            <p>
+              Loading your emails...
+            </p>
+          </div>
+        ) : error ? (
+          <div className="empty-state">
+            <p>{error}</p>
+          </div>
+        ) : emails.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">
+              ✉
+            </div>
+
+            <h3>
+              No emails found
+            </h3>
+
+            <p>
+              Connect Gmail to load your
+              inbox.
+            </p>
+          </div>
+        ) : (
+          <div className="all-email-list">
+            {emails.map((email) => (
+              <article
+                className="full-email-card"
+                key={
+                  email._id ||
+                  email.gmailMessageId
+                }
+              >
+                {/* Email Header */}
+                <div className="full-email-top">
+                  <div className="sender-section">
+                    <div className="email-avatar">
+                      {getInitial(
+                        email.sender
+                      )}
+                    </div>
+
+                    <div>
+                      <strong>
+                        {email.sender ||
+                          "Unknown sender"}
+                      </strong>
+
+                      <p>
+                        {email.receiver ||
+                          "No receiver"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="email-badges">
+                    <span
+                      className={`priority-badge ${
+                        email.importance ||
+                        "low"
+                      }`}
+                    >
+                      {email.importance ||
+                        "low"}
+                    </span>
+
+                    <span className="email-category">
+                      {email.category ||
+                        "general"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Subject */}
+                <h2 className="full-email-subject">
+                  {email.subject ||
+                    "(No subject)"}
+                </h2>
+
+                {/* Summary */}
+                <p className="full-email-summary">
+                  {email.summary ||
+                    email.snippet ||
+                    "No preview available."}
+                </p>
+
+                {/* Bottom Details */}
+                <div className="full-email-bottom">
+                  <div>
+                    <span className="email-detail-label">
+                      STATUS
+                    </span>
+
+                    <span
+                      className={
+                        email.isRead
+                          ? "read-status"
+                          : "unread-status"
+                      }
+                    >
+                      {email.isRead
+                        ? "Read"
+                        : "Unread"}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="email-detail-label">
+                      RECEIVED
+                    </span>
+
+                    <span>
+                      {formatDate(
+                        email.receivedAt
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+
+        <footer className="footer">
+          <span>
+            MailPilot © 2026
+          </span>
+
+          <span>
+            Built to make every email count. ✦
+          </span>
+        </footer>
+      </>
+    );
+  };
+
+  // ==========================================================
+  // OPPORTUNITIES PAGE
+  // ==========================================================
+
+  const renderOpportunitiesPage = () => {
+    return (
+      <>
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">
+              CAREER OPPORTUNITIES
+            </p>
+
+            <h1>Opportunities</h1>
+          </div>
+
+          <button className="connect-button">
+            <span>●</span>
+            Connect Gmail
+          </button>
+        </header>
+
+        {/* Opportunities Header */}
+        <section className="page-intro">
+          <div>
+            <h2>
+              Your Career Opportunities
+            </h2>
+
+            <p>
+              Jobs and internships discovered
+              from your emails.
+            </p>
+          </div>
+
+          <div className="email-count">
+            <strong>
+              {opportunities.length}
+            </strong>
+
+            <span>
+              opportunities found
+            </span>
+          </div>
+        </section>
+
+        {/* Loading */}
+        {loading ? (
+          <div className="opportunity-page-empty">
+            <div className="opportunity-icon">
+              ✧
+            </div>
+
+            <h3>
+              Loading opportunities...
+            </h3>
+
+            <p>
+              We're analyzing your inbox
+              for career opportunities.
+            </p>
+          </div>
+        ) : error ? (
+          /* Error */
+          <div className="opportunity-page-empty">
+            <div className="opportunity-icon">
+              !
+            </div>
+
+            <h3>
+              Unable to load
+              opportunities
+            </h3>
+
+            <p>{error}</p>
+          </div>
+        ) : opportunities.length === 0 ? (
+          /* Empty */
+          <div className="opportunity-page-empty">
+            <div className="opportunity-icon">
+              ✧
+            </div>
+
+            <h3>
+              No opportunities found
+            </h3>
+
+            <p>
+              When MailPilot detects a
+              genuine job or internship
+              opportunity, it will appear
+              here.
+            </p>
+          </div>
+        ) : (
+          /* Opportunity Cards */
+          <div className="opportunities-page-list">
+            {opportunities.map(
+              (opportunity) => (
+                <article
+                  className="full-opportunity-card"
+                  key={opportunity._id}
+                >
+                  {/* Card Top */}
+                  <div className="opportunity-card-top">
+                    <div className="opportunity-title-section">
+                      <div className="opportunity-large-icon">
+                        ✧
+                      </div>
+
+                      <div>
+                        <h2>
+                          {opportunity.role ||
+                            "Job opportunity"}
+                        </h2>
+
+                        <p>
+                          {opportunity.company ||
+                            "Company not specified"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <span
+                      className={`opportunity-status ${
+                        opportunity.status ||
+                        "new"
+                      }`}
+                    >
+                      {opportunity.status ||
+                        "new"}
+                    </span>
+                  </div>
+
+                  {/* Details */}
+                  <div className="opportunity-details">
+                    <span className="opportunity-type">
+                      {opportunity.type ||
+                        "other"}
+                    </span>
+
+                    {opportunity.location && (
+                      <span>
+                        📍{" "}
+                        {opportunity.location}
+                      </span>
+                    )}
+
+                    {opportunity.deadline && (
+                      <span>
+                        Deadline:{" "}
+                        {formatDate(
+                          opportunity.deadline
+                        )}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Description */}
+                  {opportunity.description && (
+                    <p className="opportunity-description">
+                      {
+                        opportunity.description
+                      }
+                    </p>
+                  )}
+
+                  {/* Footer */}
+                  <div className="opportunity-card-footer">
+                    <span>
+                      Source:{" "}
+                      {opportunity.source ||
+                        "email"}
+                    </span>
+
+                    <button className="opportunity-view-button">
+                      View opportunity →
+                    </button>
+                  </div>
+                </article>
+              )
+            )}
+          </div>
+        )}
+
+        <footer className="footer">
+          <span>
+            MailPilot © 2026
+          </span>
+
+          <span>
+            Built to make every email count. ✦
+          </span>
+        </footer>
+      </>
+    );
+  };
+
+  // ==========================================================
+  // PLACEHOLDER PAGES
+  // ==========================================================
+
+  const renderPlaceholderPage = (
+    title,
+    eyebrow,
+    description
+  ) => {
+    return (
+      <>
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">
+              {eyebrow}
+            </p>
+
+            <h1>{title}</h1>
+          </div>
+
+          <button className="connect-button">
+            <span>●</span>
+            Connect Gmail
+          </button>
+        </header>
+
+        <div className="opportunity-page-empty">
+          <div className="opportunity-icon">
+            ✦
+          </div>
+
+          <h3>{title} is coming next</h3>
+
+          <p>{description}</p>
+        </div>
+
+        <footer className="footer">
+          <span>
+            MailPilot © 2026
+          </span>
+
+          <span>
+            Built to make every email count. ✦
+          </span>
+        </footer>
+      </>
+    );
+  };
+
+  // ==========================================================
+  // PAGE ROUTER
+  // ==========================================================
+
+  const renderCurrentPage = () => {
+    if (activeTab === "Overview") {
+      return renderOverviewPage();
+    }
+
+    if (activeTab === "All Emails") {
+      return renderAllEmailsPage();
+    }
+
+    if (activeTab === "Opportunities") {
+      return renderOpportunitiesPage();
+    }
+
+    if (activeTab === "AI Assistant") {
+      return renderPlaceholderPage(
+        "AI Assistant",
+        "YOUR AI COPILOT",
+        "Ask MailPilot to summarize emails, find opportunities, and help you decide what needs your attention."
+      );
+    }
+
+    if (activeTab === "Reminders") {
+      return renderPlaceholderPage(
+        "Reminders",
+        "SMART REMINDERS",
+        "Important follow-ups and deadlines will appear here."
+      );
+    }
+
+    return renderOverviewPage();
+  };
+
+  // ==========================================================
+  // MAIN UI
+  // ==========================================================
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="mailpilot">
+      {/* ======================================================
+          SIDEBAR
+          ====================================================== */}
 
-      <div className="ticks"></div>
+      <aside className="sidebar">
+        <div className="brand">
+          <div className="brand-icon">
+            M
+          </div>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+          <span>
+            MailPilot
+          </span>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        <p className="sidebar-label">
+          WORKSPACE
+        </p>
+
+        <nav className="sidebar-nav">
+          {menuItems.map((item) => (
+            <button
+              key={item.name}
+              className={`nav-item ${
+                activeTab === item.name
+                  ? "active"
+                  : ""
+              }`}
+              onClick={() =>
+                setActiveTab(item.name)
+              }
+            >
+              <span className="nav-icon">
+                {item.icon}
+              </span>
+
+              {item.name}
+            </button>
+          ))}
+        </nav>
+
+        {/* Workspace User */}
+        <div className="sidebar-bottom">
+          <div className="avatar">
+            G
+          </div>
+
+          <div>
+            <strong>
+              My Workspace
+            </strong>
+
+            <p>
+              Personal account
+            </p>
+          </div>
+        </div>
+      </aside>
+
+      {/* ======================================================
+          MAIN CONTENT
+          ====================================================== */}
+
+      <main className="main-content">
+        {renderCurrentPage()}
+      </main>
+    </div>
+  );
 }
 
-export default App
+export default App;
