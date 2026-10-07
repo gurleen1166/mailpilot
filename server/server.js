@@ -1,4 +1,5 @@
 require("dotenv").config();
+const aiRoutes = require("./routes/aiRoutes");
 const googleRoutes = require("./routes/googleRoutes");
 const gmailRoutes = require("./routes/gmailRoutes");
 const opportunityRoutes = require("./routes/opportunityRoutes");
@@ -16,6 +17,7 @@ app.use(express.json());
 app.use("/auth", googleRoutes);
 app.use("/api/gmail", gmailRoutes);
 app.use("/api/opportunities", opportunityRoutes);
+app.use("/api/ai", aiRoutes);
 // Test route
 app.get("/", (req, res) => {
   res.json({

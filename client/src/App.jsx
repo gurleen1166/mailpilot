@@ -9,6 +9,11 @@ function App() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedEmail, setSelectedEmail] = useState(null);
+  const [aiPrompt, setAiPrompt] = useState("");
+
+  const [aiResponse, setAiResponse] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
 
   // Temporary user ID for local development.
   // Later this will come from authenticated Google login.
@@ -847,7 +852,306 @@ function App() {
       </>
     );
   };
+// ==========================================================
+// AI ASSISTANT PAGE
+// ==========================================================
+const askAI = async () => {
+  if (!aiPrompt.trim()) return;
 
+  setAiLoading(true);
+  setAiResponse("");
+
+  try {
+    const response = await fetch("http://localhost:5001/api/ai/ask", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt: aiPrompt,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to get AI response");
+    }
+
+    setAiResponse(data.response);
+  } catch (error) {
+    console.error("AI request error:", error);
+    setAiResponse("Sorry, I couldn't process your request right now.");
+  } finally {
+    setAiLoading(false);
+  }
+};
+
+const renderAIAssistantPage = () => {
+  return (
+    <>
+      <header className="topbar">
+        <div>
+          <p className="eyebrow">YOUR AI COPILOT</p>
+          <h1>AI Assistant</h1>
+        </div>
+
+        <button className="connect-button" type="button">
+          <span>●</span>
+          Connect Gmail
+        </button>
+      </header>
+
+      <section className="ai-assistant-page">
+
+        <div className="ai-hero-card">
+          <div className="ai-hero-icon">✦</div>
+
+          <div>
+            <span className="welcome-tag">
+              ✦ MAILPILOT AI
+            </span>
+
+            <h2>
+              Your inbox,
+              <br />
+              with an AI copilot.
+            </h2>
+
+            <p>
+              Ask questions about your emails, find what needs
+              your attention, or generate a reply.
+            </p>
+          </div>
+        </div>
+
+        <div className="ai-chat-card">
+          <div className="ai-section-header">
+            <div>
+              <h2>Ask MailPilot</h2>
+
+              <p>
+                Get help understanding and responding to your emails.
+              </p>
+            </div>
+
+            <span className="live-badge">
+              AI READY
+            </span>
+          </div>
+
+          <div className="ai-input-wrapper">
+            <textarea
+              value={aiPrompt}
+              onChange={(event) => {
+                setAiPrompt(event.target.value);
+              }}
+              placeholder="Ask something like: Which emails need my attention?"
+              rows={4}
+            />
+
+            <button
+  className="primary-button"
+  type="button"
+  onClick={askAI}
+  disabled={aiLoading || !aiPrompt.trim()}
+>
+  {aiLoading ? "Thinking..." : "Ask AI"} <span>→</span>
+</button>
+          </div>
+
+          <div className="ai-suggestions">
+            <button
+              type="button"
+              onClick={() =>
+                setAiPrompt(
+                  "Which emails need my attention?"
+                )
+              }
+            >
+              📌 Important emails
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setAiPrompt(
+                  "Which emails need a reply?"
+                )
+              }
+            >
+              ✉ Emails needing replies
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setAiPrompt(
+                  "Summarize my inbox."
+                )
+              }
+            >
+              📝 Summarize inbox
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setAiPrompt(
+                  "Find career opportunities in my emails."
+                )
+              }
+            >
+              🎯 Find opportunities
+            </button>
+          </div>
+          {aiResponse && (
+  <div className="ai-response-box">
+    <div className="ai-response-header">
+      <span>✦</span>
+      <strong>MailPilot AI</strong>
+    </div>
+
+    <p>{aiResponse}</p>
+  </div>
+)}
+        </div>
+
+        <div className="ai-reply-card">
+          <div className="ai-section-header">
+            <div>
+              <h2>AI Reply Generator</h2>
+
+              <p>
+                Select an email and MailPilot will help you
+                decide what to reply.
+              </p>
+            </div>
+
+            <span className="ai-reply-badge">
+              ✦ SMART REPLY
+            </span>
+          </div>
+
+          <div className="reply-email-list">
+            {emails.length === 0 ? (
+              <div className="empty-state">
+                <p>
+                  No emails available.
+                </p>
+              </div>
+            ) : (
+              emails.slice(0, 5).map((email) => (
+                <button
+                  className={`reply-email-item ${
+                    selectedEmail?._id === email._id
+                      ? "selected"
+                      : ""
+                  }`}
+                  key={
+                    email._id ||
+                    email.gmailMessageId
+                  }
+                  type="button"
+                  onClick={() =>
+                    setSelectedEmail(email)
+                  }
+                >
+                  <div className="reply-email-avatar">
+                    {getInitial(email.sender)}
+                  </div>
+
+                  <div className="reply-email-content">
+                    <strong>
+                      {email.sender || "Unknown sender"}
+                    </strong>
+
+                    <span>
+                      {email.subject || "(No subject)"}
+                    </span>
+                  </div>
+
+                  <span className="reply-arrow">
+                    →
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+
+          {selectedEmail && (
+            <div className="selected-email-panel">
+
+              <div className="selected-email-header">
+                <div>
+                  <span className="email-detail-label">
+                    SELECTED EMAIL
+                  </span>
+
+                  <h3>
+                    {selectedEmail.subject ||
+                      "(No subject)"}
+                  </h3>
+
+                  <p>
+                    From:{" "}
+                    {selectedEmail.sender ||
+                      "Unknown sender"}
+                  </p>
+                </div>
+
+                <span
+                  className={`priority-badge ${
+                    selectedEmail.importance || "low"
+                  }`}
+                >
+                  {selectedEmail.importance || "low"}
+                </span>
+              </div>
+
+              <div className="selected-email-body">
+                {selectedEmail.body ||
+                  selectedEmail.snippet ||
+                  selectedEmail.summary ||
+                  "No email content available."}
+              </div>
+
+              <div className="ai-reply-action">
+                <div>
+                  <h3>
+                    ✦ What should I reply?
+                  </h3>
+
+                  <p>
+                    MailPilot will analyze this email
+                    and generate a context-aware response.
+                  </p>
+                </div>
+
+                <button
+                  className="primary-button"
+                  type="button"
+                >
+                  Generate Reply <span>→</span>
+                </button>
+              </div>
+
+            </div>
+          )}
+        </div>
+
+      </section>
+
+      <footer className="footer">
+        <span>MailPilot © 2026</span>
+
+        <span>
+          Built to make every email count. ✦
+        </span>
+      </footer>
+    </>
+  );
+};
   // ==========================================================
   // PLACEHOLDER PAGES
   // ==========================================================
@@ -915,12 +1219,8 @@ function App() {
     }
 
     if (activeTab === "AI Assistant") {
-      return renderPlaceholderPage(
-        "AI Assistant",
-        "YOUR AI COPILOT",
-        "Ask MailPilot to summarize emails, find opportunities, and help you decide what needs your attention."
-      );
-    }
+  return renderAIAssistantPage();
+}
 
     if (activeTab === "Reminders") {
       return renderPlaceholderPage(

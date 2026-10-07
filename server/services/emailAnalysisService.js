@@ -111,10 +111,10 @@ const extractOpportunity = (email) => {
   const subject = email.subject || "";
   const body = email.body || email.snippet || "";
   const sender = email.sender || "";
+  const category = (email.category || "").toLowerCase();
 
   const text = `${subject}\n${body}`;
   const normalizedText = text.replace(/\s+/g, " ").trim();
-  const lowerText = normalizedText.toLowerCase();
 
   const emptyResult = {
     company: "",
@@ -123,51 +123,48 @@ const extractOpportunity = (email) => {
     interviewDate: "",
   };
 
-  // ----------------------------------------------------------
-  // 1. Ignore obvious non-opportunity emails
-  // ----------------------------------------------------------
+  // ==========================================================
+  // 1. IGNORE CLEARLY NON-OPPORTUNITY EMAILS
+  // ==========================================================
 
   const nonOpportunitySignals =
-    /\b(successful completion of my internship|completed my internship|completion of my internship|congratulations on your|recommended opportunities|curated just for you|contest is live|rewards|discount|special offer|newsletter|unsubscribe|get unstoppable|mutual connections|see more people you might know|connect with|people you may know)\b/i;
+    /\b(recommended opportunities|curated just for you|opportunities curated|top opportunities|recommended for you|people you may know|see more people you might know|mutual connections|connect with|get unstoppable|newsletter|unsubscribe|contest is live|contest|rewards|discount|special offer|cashback|sale|promotional|completed my internship|completion of my internship|successful completion of my internship|finished my internship|congratulations on your internship)\b/i;
 
-  if (nonOpportunitySignals.test(lowerText)) {
+  if (nonOpportunitySignals.test(normalizedText)) {
     return emptyResult;
   }
 
-  // ----------------------------------------------------------
-  // 2. Detect genuine job/internship signals
-  // ----------------------------------------------------------
+  // ==========================================================
+  // 2. DETERMINE WHETHER THIS IS REALLY A JOB/INTERNSHIP
+  // ==========================================================
 
-  const jobSignals =
-    /\b(apply now|apply here|job opening|job opportunity|job description|hiring for|we are hiring|job alert|vacancy|position available|career opportunity|careers|full[- ]time role|part[- ]time role|job application|job position|open position|immediate opening)\b/i;
+  const strongJobSignals =
+    /\b(job opening|job opportunity|job description|hiring for|we are hiring|vacancy|position available|open position|immediate opening|full[- ]time role|part[- ]time role|job application|apply now|apply here|apply for this role|apply for the position|submit your application|job position)\b/i;
 
-  const internshipSignals =
-    /\b(internship|internship opening|internship opportunity|internship program|interns wanted|hiring interns|internship position|summer internship|offering internships|intern role)\b/i;
+  const strongInternshipSignals =
+    /\b(internship opening|internship opportunity|internship program|internship position|summer internship|hiring interns|interns wanted|apply for.*internship|apply.*internship|internship role|internship at)\b/i;
 
-  const hasJobSignal = jobSignals.test(lowerText);
-  const hasInternshipSignal = internshipSignals.test(lowerText);
+  const hasStrongJobSignal = strongJobSignals.test(normalizedText);
+  const hasStrongInternshipSignal =
+    strongInternshipSignals.test(normalizedText);
 
-  const category = (email.category || "").toLowerCase();
-
-  const isJob = category === "job" || hasJobSignal;
   const isInternship =
-    category === "internship" || hasInternshipSignal;
+    category === "internship" && hasStrongInternshipSignal;
 
-  if (!isJob && !isInternship) {
+  const isJob =
+    category === "job" && hasStrongJobSignal;
+
+  if (!isInternship && !isJob) {
     return emptyResult;
   }
 
-  // ----------------------------------------------------------
+  // ==========================================================
   // 3. COMPANY EXTRACTION
-  // ----------------------------------------------------------
+  // ==========================================================
 
   let company = "";
 
-  // Example:
-  // Company: Microsoft
-  // Employer: Adobe
-  // Organization: Google
-
+  // Explicit company label
   const labeledCompanyMatch = normalizedText.match(
     /\b(?:company|employer|organization)\s*[:\-]\s*([A-Za-z0-9&.'-]+(?:\s+[A-Za-z0-9&.'-]+){0,5})/i
   );
@@ -178,13 +175,10 @@ const extractOpportunity = (email) => {
       .replace(/[.,;:!?]+$/, "");
   }
 
-  // Example:
-  // Software Engineer at Microsoft
-  // Internship at Adobe
-
+  // Example: "Internship at Microsoft"
   if (!company) {
     const atCompanyMatch = normalizedText.match(
-      /\b(?:at|with)\s+([A-Z][A-Za-z0-9&.'-]*(?:\s+[A-Z][A-Za-z0-9&.'-]*){0,3})/
+      /\b(?:at|with)\s+([A-Z][A-Za-z0-9&.'-]*(?:\s+[A-Z][A-Za-z0-9&.'-]*){0,3})\b/
     );
 
     if (atCompanyMatch) {
@@ -194,27 +188,54 @@ const extractOpportunity = (email) => {
     }
   }
 
-  // Example:
-  // Jia from Unstop
-  // Opportunity from Microsoft
-
-  if (!company) {
-    const fromCompanyMatch = subject.match(
-      /\bfrom\s+([A-Z][A-Za-z0-9&.'-]*(?:\s+[A-Z][A-Za-z0-9&.'-]*){0,2})\b/
+  // Example: "Jia from Unstop <noreply@unstop.news>"
+  if (!company && sender) {
+    const senderFromMatch = sender.match(
+      /\bfrom\s+([A-Z][A-Za-z0-9&.'-]*(?:\s+[A-Z][A-Za-z0-9&.'-]*){0,2})\b/i
     );
 
-    if (fromCompanyMatch) {
-      company = fromCompanyMatch[1]
+    if (senderFromMatch) {
+      company = senderFromMatch[1]
         .trim()
         .replace(/[.,;:!?]+$/, "");
     }
   }
 
-  // Example:
-  // Unstop Internship
-  // Microsoft Hiring
-  // Adobe Careers
+  // Use email domain if possible
+  if (!company && sender) {
+    const domainMatch = sender.match(
+      /@([A-Za-z0-9.-]+)\.[A-Za-z]{2,}$/i
+    );
 
+    if (domainMatch) {
+      const domainParts = domainMatch[1].split(".");
+
+      const domainCompany =
+        domainParts[domainParts.length - 1];
+
+      const ignoredDomains = [
+        "gmail",
+        "googlemail",
+        "outlook",
+        "hotmail",
+        "yahoo",
+        "icloud",
+        "protonmail",
+        "mail",
+      ];
+
+      if (
+        domainCompany &&
+        !ignoredDomains.includes(domainCompany.toLowerCase())
+      ) {
+        company =
+          domainCompany.charAt(0).toUpperCase() +
+          domainCompany.slice(1);
+      }
+    }
+  }
+
+  // Example: "Microsoft Internship"
   if (!company) {
     const subjectCompanyMatch = subject.match(
       /^([A-Z][A-Za-z0-9&.'-]*(?:\s+[A-Z][A-Za-z0-9&.'-]*){0,2})\s+(?:internship|hiring|careers|jobs?|opportunity)\b/i
@@ -227,16 +248,15 @@ const extractOpportunity = (email) => {
     }
   }
 
-  // ----------------------------------------------------------
+  // ==========================================================
   // 4. ROLE EXTRACTION
-  // ----------------------------------------------------------
+  // ==========================================================
 
   let role = "";
 
-  // Explicit role labels
-
+  // Explicit role
   const labeledRoleMatch = normalizedText.match(
-    /\b(?:job title|role|position)\s*[:\-]\s*([A-Za-z][A-Za-z0-9 &/.-]{2,70})/i
+    /\b(?:job title|role|position)\s*[:\-]\s*([A-Za-z][A-Za-z0-9 &/.-]{2,70}?)(?=\s+(?:location|company|salary|stipend|deadline|apply|experience)\b|[.!?]|$)/i
   );
 
   if (labeledRoleMatch) {
@@ -245,11 +265,10 @@ const extractOpportunity = (email) => {
       .replace(/[.,;:!?]+$/, "");
   }
 
-  // Common job titles
-
+  // Common technical roles
   if (!role) {
     const roleMatch = normalizedText.match(
-      /\b(software engineer|software developer|software engineering intern|software developer intern|frontend developer|frontend engineer|frontend intern|backend developer|backend engineer|backend intern|full stack developer|full stack engineer|web developer|web development intern|data analyst|data scientist|data science intern|AI engineer|AI intern|machine learning engineer|machine learning intern|product manager|UI\/UX designer|UI\/UX intern|Java developer|Python developer|React developer|Node\.js developer|software intern|engineering intern|marketing intern|HR intern|finance intern)\b/i
+      /\b(software engineer|software developer|software engineering intern|software developer intern|frontend developer|frontend engineer|frontend intern|backend developer|backend engineer|backend intern|full stack developer|full stack engineer|full stack intern|web developer|web development intern|data analyst|data scientist|data science intern|AI engineer|AI intern|machine learning engineer|machine learning intern|product manager|UI\/UX designer|UI\/UX intern|Java developer|Python developer|React developer|Node\.js developer|software intern|engineering intern|marketing intern|HR intern|finance intern)\b/i
     );
 
     if (roleMatch) {
@@ -259,50 +278,61 @@ const extractOpportunity = (email) => {
     }
   }
 
-  // Generic internship fallback
-
-  if (!role && isInternship) {
-    role = "Internship";
+  // We do NOT create a fake "Internship" role.
+  if (!role) {
+    return emptyResult;
   }
 
-  // ----------------------------------------------------------
-  // 5. DEADLINE EXTRACTION
-  // ----------------------------------------------------------
+  // ==========================================================
+  // 5. VALIDATE COMPANY
+  // ==========================================================
+
+  const suspiciousCompanyWords =
+    /\b(dear|hi|hello|gurleen|student|candidate|applicant|team|recruitment|hiring|opportunity|opportunities|recommended|apply now)\b/i;
+
+  if (!company || suspiciousCompanyWords.test(company)) {
+    return emptyResult;
+  }
+
+  if (company.length > 60) {
+    return emptyResult;
+  }
+
+  if (company.split(/\s+/).length > 5) {
+    return emptyResult;
+  }
+
+  // ==========================================================
+  // 6. DEADLINE EXTRACTION
+  // ==========================================================
 
   const deadlineMatch = normalizedText.match(
     /\b(?:deadline|apply by|last date|applications close(?: on)?)\s*[:\-]?\s*([^.!?]{3,60})/i
   );
 
   const deadline = deadlineMatch
-    ? deadlineMatch[1].trim().replace(/[.,;]+$/, "")
+    ? deadlineMatch[1]
+        .trim()
+        .replace(/[.,;]+$/, "")
     : "";
 
-  // ----------------------------------------------------------
-  // 6. INTERVIEW DATE EXTRACTION
-  // ----------------------------------------------------------
+  // ==========================================================
+  // 7. INTERVIEW DATE EXTRACTION
+  // ==========================================================
 
   const interviewMatch = normalizedText.match(
     /\b(?:interview date|interview on|interview scheduled for)\s*[:\-]?\s*([^.!?]{3,60})/i
   );
 
   const interviewDate = interviewMatch
-    ? interviewMatch[1].trim().replace(/[.,;]+$/, "")
+    ? interviewMatch[1]
+        .trim()
+        .replace(/[.,;]+$/, "")
     : "";
 
-  // ----------------------------------------------------------
-  // 7. Validate company
-  // ----------------------------------------------------------
-
-  const suspiciousCompanyWords =
-    /\b(dear|hi|hello|gurleen|student|candidate|applicant|team|recruitment|hiring|opportunity)\b/i;
-
-  if (!company || suspiciousCompanyWords.test(company)) {
-    return emptyResult;
-  }
-
-  // ----------------------------------------------------------
-  // 8. Return clean opportunity
-  // ----------------------------------------------------------
+  // ==========================================================
+  // 8. RETURN CLEAN OPPORTUNITY
+  // ==========================================================
 
   return {
     company,
@@ -311,8 +341,6 @@ const extractOpportunity = (email) => {
     interviewDate,
   };
 };
-
-
 // ============================================================
 // 4. DETERMINE EMAIL IMPORTANCE
 // ============================================================
