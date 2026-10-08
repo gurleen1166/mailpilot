@@ -15,6 +15,9 @@ function App() {
   const [aiResponse, setAiResponse] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
 
+  const [replyText, setReplyText] = useState("");
+  const [replyLoading, setReplyLoading] = useState(false);
+
   // Temporary user ID for local development.
   // Later this will come from authenticated Google login.
   const USER_ID = "69f0b7ebe6fb8ba1b41aefde";
@@ -887,6 +890,49 @@ const askAI = async () => {
   }
 };
 
+const generateReply = async () => {
+  if (!selectedEmail) return;
+
+  setReplyLoading(true);
+  setReplyText("");
+
+  try {
+    const emailContent = `
+From: ${selectedEmail.sender || "Unknown sender"}
+Subject: ${selectedEmail.subject || "(No subject)"}
+
+Email:
+${selectedEmail.body || selectedEmail.snippet || selectedEmail.summary || ""}
+`;
+
+    const response = await fetch("http://localhost:5001/api/ai/ask", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        prompt: `Generate a professional email reply to the following email.
+
+${emailContent}
+
+Write only the reply that the recipient could send. Do not include explanations, subject lines, or quotation marks.`,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to generate reply");
+    }
+
+    setReplyText(data.response);
+  } catch (error) {
+    console.error("Reply generation error:", error);
+    setReplyText("Sorry, I couldn't generate a reply right now.");
+  } finally {
+    setReplyLoading(false);
+  }
+};
 const renderAIAssistantPage = () => {
   return (
     <>
@@ -1129,12 +1175,26 @@ const renderAIAssistantPage = () => {
                 </div>
 
                 <button
-                  className="primary-button"
-                  type="button"
-                >
-                  Generate Reply <span>→</span>
-                </button>
+  className="primary-button"
+  type="button"
+  onClick={generateReply}
+  disabled={replyLoading}
+>
+  {replyLoading ? "Generating..." : "Generate Reply"} <span>→</span>
+</button>
               </div>
+              {replyText && (
+  <div className="generated-reply-box">
+    <div className="generated-reply-header">
+      <span>✦</span>
+      <strong>Suggested Reply</strong>
+    </div>
+
+    <div className="generated-reply-content">
+      {replyText}
+    </div>
+  </div>
+)}
 
             </div>
           )}
