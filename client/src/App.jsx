@@ -1265,6 +1265,160 @@ const renderAIAssistantPage = () => {
   // PAGE ROUTER
   // ==========================================================
 
+
+  const getDaysRemaining = (deadlineDate) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const deadline = new Date(deadlineDate);
+  deadline.setHours(0, 0, 0, 0);
+
+  const difference = deadline - today;
+
+  return Math.ceil(difference / (1000 * 60 * 60 * 24));
+};
+
+const renderRemindersPage = () => {
+  const upcomingReminders = opportunities
+    .filter((opportunity) => opportunity.deadline)
+    .map((opportunity) => ({
+      ...opportunity,
+      deadlineDate: new Date(opportunity.deadline),
+    }))
+    .filter((opportunity) => !isNaN(opportunity.deadlineDate.getTime()))
+    .sort((a, b) => a.deadlineDate - b.deadlineDate);
+
+  return (
+    <>
+      <header className="topbar">
+        <div>
+          <p className="eyebrow">STAY ON TOP OF YOUR WORK</p>
+          <h1>Reminders</h1>
+        </div>
+
+        <button className="connect-button" type="button">
+          <span>●</span>
+          Connect Gmail
+        </button>
+      </header>
+
+      <section className="reminders-page">
+        <div className="reminders-hero">
+          <div className="reminders-hero-icon">⏰</div>
+
+          <div>
+            <span className="welcome-tag">✦ SMART REMINDERS</span>
+            <h2>Never miss an important deadline.</h2>
+            <p>
+              MailPilot keeps your important opportunities and deadlines
+              visible in one place.
+            </p>
+          </div>
+        </div>
+
+        <div className="reminders-card">
+          <div className="ai-section-header">
+            <div>
+              <h2>Upcoming Reminders</h2>
+              <p>Deadlines from your career opportunities.</p>
+            </div>
+
+            <span className="live-badge">
+              {upcomingReminders.length} REMINDERS
+            </span>
+          </div>
+
+          {upcomingReminders.length === 0 ? (
+            <div className="reminders-empty">
+              <div className="reminders-empty-icon">✓</div>
+              <h3>You're all caught up</h3>
+              <p>No upcoming deadlines have been detected.</p>
+            </div>
+          ) : (
+            <div className="reminders-list">
+              {upcomingReminders.map((opportunity) => (
+                <div
+                  className="reminder-item"
+                  key={opportunity._id}
+                >
+                  <div className="reminder-icon">⏰</div>
+
+                  <div className="reminder-content">
+                    <span className="email-detail-label">
+                      DEADLINE
+                    </span>
+
+                    <h3>
+                      {opportunity.role || "Opportunity deadline"}
+                    </h3>
+
+                    <p>
+                      {opportunity.company || "Unknown company"}
+                      {opportunity.location
+                        ? ` • ${opportunity.location}`
+                        : ""}
+                    </p>
+                  </div>
+
+                  <div className="reminder-date">
+                    <strong>
+                      {opportunity.deadlineDate.toLocaleDateString(
+                        "en-IN",
+                        {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        }
+                      )}
+                    </strong>
+
+                    <span>
+                      {opportunity.status || "new"}
+                    </span>
+                    <span
+  className={`reminder-countdown ${
+    getDaysRemaining(opportunity.deadlineDate) <= 1
+      ? "urgent"
+      : getDaysRemaining(opportunity.deadlineDate) <= 7
+      ? "warning"
+      : ""
+  }`}
+>
+  {(() => {
+    const days = getDaysRemaining(opportunity.deadlineDate);
+
+    if (days < 0) {
+      return `${Math.abs(days)} days overdue`;
+    }
+
+    if (days === 0) {
+      return "Due today";
+    }
+
+    if (days === 1) {
+      return "1 day remaining";
+    }
+
+    return `${days} days remaining`;
+  })()}
+</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <footer className="footer">
+        <span>MailPilot © 2026</span>
+        <span>Built to make every email count. ✦</span>
+      </footer>
+    </>
+  );
+};
+
+
   const renderCurrentPage = () => {
     if (activeTab === "Overview") {
       return renderOverviewPage();
@@ -1283,12 +1437,8 @@ const renderAIAssistantPage = () => {
 }
 
     if (activeTab === "Reminders") {
-      return renderPlaceholderPage(
-        "Reminders",
-        "SMART REMINDERS",
-        "Important follow-ups and deadlines will appear here."
-      );
-    }
+  return renderRemindersPage();
+}
 
     return renderOverviewPage();
   };

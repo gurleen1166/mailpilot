@@ -1776,3 +1776,26 @@ button:focus-visible {
     width: 100%;
   }
 }
+
+/* Reminder countdown */
+.reminder-countdown {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: #f1efff;
+  color: #6556e8;
+}
+
+.reminder-countdown.urgent {
+  background: #fff1f1;
+  color: #d94b4b;
+}
+
+.reminder-countdown.warning {
+  background: #fff8e7;
+  color: #b7791f;
+}
