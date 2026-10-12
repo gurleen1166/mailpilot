@@ -64,15 +64,7 @@ router.get("/google/callback", async (req, res) => {
     console.log("Saved refresh token:", Boolean(user.gmail?.refreshToken));
 console.log("Gmail connected flag:", user.gmail?.connected);
 
-    res.json({
-      message: "Gmail connected successfully",
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        gmailConnected: user.gmail?.connected
-      }
-    });
+    return res.redirect("http://localhost:5173?gmail=connected");
 
   } catch (error) {
     console.error("Google OAuth error:", error.message);

@@ -142,18 +142,16 @@ router.get("/emails/:userId", async (req, res) => {
         return header?.value || "";
       };
 
-
       // --------------------------------------------------------
       // Prepare analysis input
       // --------------------------------------------------------
 
-      const analysisInput = {
-        subject: getHeader("Subject"),
-        snippet: emailData.snippet || "",
-        body: body || "",
-      };
-
-
+const analysisInput = {
+  subject: getHeader("Subject"),
+  sender: getHeader("From"),
+  snippet: emailData.snippet || "",
+  body: body || "",
+};
       // --------------------------------------------------------
       // AI-style email analysis
       // --------------------------------------------------------
@@ -296,7 +294,6 @@ router.get("/emails/:userId", async (req, res) => {
         Boolean(
           savedEmail.extractedData?.role?.trim()
         );
-
 
       // --------------------------------------------------------
       // CREATE / UPDATE OPPORTUNITY

@@ -21,6 +21,7 @@ function App() {
   // Temporary user ID for local development.
   // Later this will come from authenticated Google login.
   const USER_ID = "69f0b7ebe6fb8ba1b41aefde";
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5001";
 
   // ==========================================================
   // FETCH DASHBOARD DATA
@@ -35,10 +36,10 @@ function App() {
         const [emailResponse, opportunityResponse] =
           await Promise.all([
             fetch(
-              `http://localhost:5001/api/gmail/emails/saved/${USER_ID}`
+              `${API_BASE_URL}/api/gmail/emails/saved/${USER_ID}`
             ),
             fetch(
-              `http://localhost:5001/api/opportunities/${USER_ID}`
+              `${API_BASE_URL}/api/opportunities/${USER_ID}`
             ),
           ]);
 
@@ -145,11 +146,17 @@ function App() {
 
             <h1>Overview</h1>
           </div>
+<button
+  className="connect-button"
+  type="button"
+  onClick={() => {
+    window.location.href = `${API_BASE_URL}/auth/google`;
+  }}
+>
+  <span>●</span>
+  Connect Gmail
+</button>
 
-          <button className="connect-button">
-            <span>●</span>
-            Connect Gmail
-          </button>
         </header>
 
         {/* Welcome Card */}
@@ -865,7 +872,7 @@ const askAI = async () => {
   setAiResponse("");
 
   try {
-    const response = await fetch("http://localhost:5001/api/ai/ask", {
+    const response = await fetch(`${API_BASE_URL}/api/ai/ask`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -905,7 +912,7 @@ Email:
 ${selectedEmail.body || selectedEmail.snippet || selectedEmail.summary || ""}
 `;
 
-    const response = await fetch("http://localhost:5001/api/ai/ask", {
+    const response = await fetch(`${API_BASE_URL}/api/ai/ask`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -941,11 +948,12 @@ const renderAIAssistantPage = () => {
           <p className="eyebrow">YOUR AI COPILOT</p>
           <h1>AI Assistant</h1>
         </div>
+onClick={() => {
+  alert("Connect Gmail button clicked!");
+  window.location.href = "http://localhost:5001/auth/google";
+}}
 
-        <button className="connect-button" type="button">
-          <span>●</span>
-          Connect Gmail
-        </button>
+
       </header>
 
       <section className="ai-assistant-page">

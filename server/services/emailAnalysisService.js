@@ -12,6 +12,13 @@ const categorizeEmail = (email) => {
     email.body || ""
   }`.toLowerCase();
 
+// Ignore job and internship recommendation newsletters
+const recommendationNewsletter =
+  /recommended opportunities|opportunities curated|curated just for you|high-paying roles picked for you|missing out on a very big linkedin opportunity/i;
+
+if (recommendationNewsletter.test(text)) {
+  return "promotion";
+}
   // Completed internships are NOT opportunities
   if (
     /\b(completed my internship|completion of my internship|successful completion of my internship|finished my internship|completed internship)\b/i.test(
@@ -141,9 +148,8 @@ const extractOpportunity = (email) => {
   const strongJobSignals =
     /\b(job opening|job opportunity|job description|hiring for|we are hiring|vacancy|position available|open position|immediate opening|full[- ]time role|part[- ]time role|job application|apply now|apply here|apply for this role|apply for the position|submit your application|job position)\b/i;
 
-  const strongInternshipSignals =
-    /\b(internship opening|internship opportunity|internship program|internship position|summer internship|hiring interns|interns wanted|apply for.*internship|apply.*internship|internship role|internship at)\b/i;
-
+const strongInternshipSignals =
+  /\b(internship|intern|interns|hiring interns|interns wanted|apply for an internship|apply for this internship|internship role|internship opening|internship opportunity|internship program|internship position|summer internship)\b/i;
   const hasStrongJobSignal = strongJobSignals.test(normalizedText);
   const hasStrongInternshipSignal =
     strongInternshipSignals.test(normalizedText);
@@ -161,13 +167,12 @@ const extractOpportunity = (email) => {
   // ==========================================================
   // 3. COMPANY EXTRACTION
   // ==========================================================
-
   let company = "";
-
   // Explicit company label
-  const labeledCompanyMatch = normalizedText.match(
-    /\b(?:company|employer|organization)\s*[:\-]\s*([A-Za-z0-9&.'-]+(?:\s+[A-Za-z0-9&.'-]+){0,5})/i
-  );
+const labeledCompanyMatch = normalizedText.match(
+  /\b(?:company|employer|organization)\s*[:\-]\s*([A-Za-z0-9&.' -]+?)(?=\s+\b(?:role|job title|position|deadline|apply|location)\b|[,;\n]|$)/i
+);
+
 
   if (labeledCompanyMatch) {
     company = labeledCompanyMatch[1]
@@ -267,9 +272,9 @@ const extractOpportunity = (email) => {
 
   // Common technical roles
   if (!role) {
-    const roleMatch = normalizedText.match(
-      /\b(software engineer|software developer|software engineering intern|software developer intern|frontend developer|frontend engineer|frontend intern|backend developer|backend engineer|backend intern|full stack developer|full stack engineer|full stack intern|web developer|web development intern|data analyst|data scientist|data science intern|AI engineer|AI intern|machine learning engineer|machine learning intern|product manager|UI\/UX designer|UI\/UX intern|Java developer|Python developer|React developer|Node\.js developer|software intern|engineering intern|marketing intern|HR intern|finance intern)\b/i
-    );
+const roleMatch = normalizedText.match(
+  /\b(software engineer|software developer|software engineering intern|software developer intern|frontend developer|frontend engineer|frontend intern|front[- ]end developer|front[- ]end engineer|backend developer|backend engineer|backend intern|back[- ]end developer|back[- ]end engineer|full stack developer|full stack engineer|full stack intern|web developer|web development intern|data analyst|data engineer|data scientist|data science intern|AI engineer|AI intern|artificial intelligence engineer|machine learning engineer|machine learning intern|ML engineer|cloud engineer|cloud intern|DevOps engineer|DevOps intern|cybersecurity analyst|cybersecurity intern|security engineer|product manager|product analyst|UI\/UX designer|UI\/UX intern|Java developer|Python developer|React developer|Node\.js developer|QA engineer|test engineer|quality assurance engineer|database administrator|business analyst|marketing intern|HR intern|finance intern|engineering intern|technical support engineer)\b/i
+);
 
     if (roleMatch) {
       role = roleMatch[1]
